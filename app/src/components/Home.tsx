@@ -48,7 +48,9 @@ const Home: React.FC = () => {
     const [userLocation, setUserLocation] = useState<Coordinate | null>(null);
     const [shelters, setShelters] = useState<Shelter[]>([]);
     const [selectedShelter, setSelectedShelter] = useState<Shelter | null>(null);
-    const [showAllShelters, setShowAllShelters] = useState(false); // State for showing all shelters
+    const [showAllShelters, setShowAllShelters] = useState(false); 
+
+    const [showSidebar, setShowSidebar] = useState(false);
 
     const navigate = useNavigate();
     const location = useLocation();
@@ -107,13 +109,13 @@ const Home: React.FC = () => {
     useEffect(() => {
         if (!userLocation) return;
 
-                const fetchShelters = async () => {
+        const fetchShelters = async () => {
             try {
                 const response = await axios.get(`${API_URL}/api/getBunkers`, {
                     params: { lat: userLocation.lat, lon: userLocation.lon, range: 0.5 },
                     headers: {
-                    "ngrok-skip-browser-warning": "true"
-                }
+                        "ngrok-skip-browser-warning": "true"
+                    }
                 });
 
                 let sheltersData: Shelter[] = [];
@@ -194,11 +196,36 @@ const Home: React.FC = () => {
         }
 
         if (selectedShelter && userLocation) {
+            //         routingControlRef.current = L.Routing.control({
+            //             waypoints: [
+            //                 L.latLng(userLocation.lat, userLocation.lon),
+            //                 L.latLng(selectedShelter.lat, selectedShelter.lon)
+            //             ],
+            //             routeWhileDragging: false,
+            //             addWaypoints: false,
+            //             show: false,
+            //             // @ts-ignore - The type definition is missing this valid option
+            //             createMarker: () => null,
+            //             lineOptions: {
+            //                 styles: [{ color: '#3b82f6', opacity: 0.8, weight: 6 }],
+            //                 extendToWaypoints: false,
+            //                 missingRouteTolerance: 0
+            //             }
+            //         }).addTo(map);
+            //     }
+            // }, [selectedShelter, userLocation]);
             routingControlRef.current = L.Routing.control({
                 waypoints: [
                     L.latLng(userLocation.lat, userLocation.lon),
                     L.latLng(selectedShelter.lat, selectedShelter.lon)
                 ],
+                // --- ADD THIS ---
+                // Specify the walking profile
+                router: L.Routing.osrmv1({
+                    serviceUrl: `https://router.project-osrm.org/route/v1`,
+                    profile: 'foot' // Use 'foot' for walking
+                }),
+                // --- END ADD ---
                 routeWhileDragging: false,
                 addWaypoints: false,
                 show: false,
@@ -221,6 +248,7 @@ const Home: React.FC = () => {
 
     return (
         <div className="flex flex-col h-screen">
+            {/* Header */}
             <header className="p-3 bg-gray-100 border-b border-gray-300 flex items-center z-10">
                 {user.photoURL && (
                     <img
@@ -229,7 +257,6 @@ const Home: React.FC = () => {
                         className="rounded-full w-10 h-10 mr-3"
                     />
                 )}
-
                 <div>
                     <strong>Welcome, {user.displayName}!</strong>
                     {user.email && (
@@ -239,7 +266,20 @@ const Home: React.FC = () => {
             </header>
 
             <div className="flex flex-1 overflow-hidden">
-                <aside className="w-72 overflow-y-auto border-r border-gray-300 bg-white z-10">
+                {/* Sidebar */}
+                <aside className={`bg-white border-r border-gray-300 z-10 
+        ${showSidebar ? 'block' : 'hidden'} 
+        md:block w-72 md:w-72 absolute md:relative h-full md:h-auto`}>
+                    {/* Close button for mobile */}
+                    <div className="flex justify-end md:hidden p-2">
+                        <button
+                            onClick={() => setShowSidebar(false)}
+                            className="text-gray-500 hover:text-gray-700"
+                        >
+                            ✕
+                        </button>
+                    </div>
+
                     <h2 className="px-4 py-3 m-0 border-b border-gray-300 text-lg font-semibold">
                         Nearby Shelters
                     </h2>
@@ -250,7 +290,8 @@ const Home: React.FC = () => {
                                 <li
                                     key={index}
                                     onClick={() => setSelectedShelter(shelter)}
-                                    className={`px-4 py-3 cursor-pointer border-b border-gray-200 ${selectedShelter === shelter ? 'bg-indigo-50' : 'bg-transparent'}`}
+                                    className={`px-4 py-3 cursor-pointer border-b border-gray-200 ${selectedShelter === shelter ? 'bg-indigo-50' : 'bg-transparent'
+                                        }`}
                                 >
                                     <strong className="block text-sm">{shelter.adresa}</strong>
                                     <div className="flex justify-between text-xs text-gray-500">
@@ -261,7 +302,10 @@ const Home: React.FC = () => {
                             ))}
                             {!showAllShelters && shelters.length > 5 && (
                                 <li className="text-center p-3">
-                                    <button onClick={() => setShowAllShelters(true)} className="text-sm text-indigo-600 hover:underline">
+                                    <button
+                                        onClick={() => setShowAllShelters(true)}
+                                        className="text-sm text-indigo-600 hover:underline"
+                                    >
                                         Show More
                                     </button>
                                 </li>
@@ -272,12 +316,22 @@ const Home: React.FC = () => {
                     )}
                 </aside>
 
+                {/* Map */}
                 <main className="flex-1 relative">
+                    {/* Mobile toggle button */}
+                    {!showSidebar && (
+                                            <button
+                        onClick={() => setShowSidebar(true)}
+                        className="md:hidden absolute top-20 left-3 z-20 p-2 bg-white rounded shadow"
+                    >
+                        ☰
+                    </button>
+                    )}
+
                     <div ref={mapContainerRef} className="w-full h-full z-5" />
                 </main>
             </div>
         </div>
-
     );
 }
 
