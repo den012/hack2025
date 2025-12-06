@@ -15,7 +15,7 @@ export default defineConfig({
     tailwindcss(),
       VitePWA({
       // Use your existing service worker
-      srcDir: 'src',
+      srcDir: 'public',
       filename: 'service-worker.js',
       strategies: 'injectManifest',
       
