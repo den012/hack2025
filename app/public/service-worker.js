@@ -37,6 +37,9 @@ registerRoute(
   ({ url }) => url.hostname === API_HOST,
   new StaleWhileRevalidate({
     cacheName: 'api-data-cache',
+    matchOptions: {
+        ignoreSearch: true,
+    },
     plugins: [
       new CacheableResponsePlugin({ statuses: [200] }),
     ],
@@ -48,6 +51,9 @@ registerRoute(
 // this will prevent the service worker from crashing. It allows the network
 // error to propagate to your app, where you already handle it.
 setCatchHandler(({ event }) => {
+    if(event.request.destination === 'document') {
+        return caches.match('/');
+    }
   // The event handler must return a Response or a Promise that resolves to a Response.
   // We are returning the error response that the browser would have generated.
   return Response.error();
