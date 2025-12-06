@@ -110,7 +110,10 @@ const Home: React.FC = () => {
                 const fetchShelters = async () => {
             try {
                 const response = await axios.get(`${API_URL}/api/getBunkers`, {
-                    params: { lat: userLocation.lat, lon: userLocation.lon, range: 0.5 }
+                    params: { lat: userLocation.lat, lon: userLocation.lon, range: 0.5 },
+                    headers: {
+                    "ngrok-skip-browser-warning": "true"
+                }
                 });
 
                 let sheltersData: Shelter[] = [];

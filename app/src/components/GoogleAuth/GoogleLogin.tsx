@@ -27,6 +27,7 @@ const Login: React.FC = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "ngrok-skip-browser-warning": "true"
         },
         id: user.uid,
         name: user.displayName,
