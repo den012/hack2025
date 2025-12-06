@@ -107,35 +107,45 @@ const Home: React.FC = () => {
     useEffect(() => {
         if (!userLocation) return;
 
-        const fetchShelters = async () => {
+                const fetchShelters = async () => {
             try {
                 const response = await axios.get(`${API_URL}/api/getBunkers`, {
                     params: { lat: userLocation.lat, lon: userLocation.lon, range: 0.5 }
                 });
 
+                let sheltersData: Shelter[] = [];
+
+                // Safely determine if the response is an array, a single object, or something else
                 if (Array.isArray(response.data)) {
-                    const sheltersWithDistance = response.data.map((shelter: Shelter) => ({
+                    sheltersData = response.data;
+                } else if (response.data && typeof response.data === 'object') {
+                    // If it's a single object, wrap it in an array
+                    sheltersData = [response.data];
+                }
+                // If it's neither, sheltersData remains an empty array, preventing errors.
+
+                if (sheltersData.length > 0) {
+                    const sheltersWithDistance = sheltersData.map((shelter: Shelter) => ({
                         ...shelter,
                         distance: getDistance(userLocation.lat, userLocation.lon, shelter.lat, shelter.lon)
                     }));
 
                     sheltersWithDistance.sort((a: Shelter, b: Shelter) => a.distance! - b.distance!);
-
                     setShelters(sheltersWithDistance);
                 } else {
-                    console.warn("API did not return an array for shelters:", response.data);
-                    setShelters([]); 
+                    // This will now catch cases where the API returned invalid data
+                    console.warn("API did not return a valid array or object for shelters:", response.data);
+                    setShelters([]);
                 }
             } catch (error) {
                 console.error("Error fetching shelters:", error);
-                setShelters([]); 
+                setShelters([]);
             }
         };
 
         fetchShelters();
     }, [userLocation, API_URL]);
 
-    // --- Render Markers on Map ---
     useEffect(() => {
         const map = mapInstanceRef.current;
         if (!map) return;
