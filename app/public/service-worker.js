@@ -35,7 +35,7 @@ registerRoute(
 // Try the network first to get the latest data, fall back to cache if offline.
 registerRoute(
   ({ url }) => url.hostname === API_HOST,
-  new NetworkFirst({
+  new StaleWhileRevalidate({
     cacheName: 'api-data-cache',
     plugins: [
       new CacheableResponsePlugin({
