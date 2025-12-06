@@ -14,7 +14,7 @@ export default defineConfig({
     react(), 
     tailwindcss(),
       VitePWA({
-      // Use your existing service worker
+      registerType: 'autoUpdate',
       srcDir: 'public',
       filename: 'service-worker.js',
       strategies: 'injectManifest',
