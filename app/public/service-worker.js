@@ -1,17 +1,13 @@
-const CACHE_NAME = 'bunker-map-cache-v2';
+const CACHE_NAME = 'bunker-map-cache-v3'; // <-- Incremented cache version
 const API_URL_BASE = 'https://2bd3558eafcb.ngrok-free.app/api/getBunkers';
-const MAP_TILE_HOST = 'tile.openstreetmap.org';
+const MAP_TILE_DOMAIN = 'tile.openstreetmap.org'; // <-- Renamed for clarity
 
-// IMPORTANT: After you run `npm run build`, you need to come back here
-// and add the generated JS and CSS file paths to this list.
-// e.g., '/assets/index-a1b2c3d4.js', '/assets/index-e5f6g7h8.css'
 const APP_SHELL_URLS = [
     '/',
     '/index.html',
+    // IMPORTANT: You may need to update these filenames after your next build
     '/assets/index-CDVKvM6r.js',
-    '/assets/index-Dc6UIqLD.css',
-    '/index.html'
-    // Add your built asset files here
+    '/assets/index-Dc6UIqLD.css'
 ];
 
 self.addEventListener('install', event => {
@@ -42,13 +38,12 @@ self.addEventListener('activate', event => {
     );
 });
 
-
-// network requests
 self.addEventListener('fetch', event => {
     const requestUrl = new URL(event.request.url);
 
     // Strategy 1: Map Tiles (Cache First, then Network)
-    if (requestUrl.hostname === MAP_TILE_HOST) {
+    // FIX: Check if hostname ENDS WITH the map tile domain
+    if (requestUrl.hostname.endsWith(MAP_TILE_DOMAIN)) {
         event.respondWith(
             caches.open(CACHE_NAME).then(cache => {
                 return cache.match(event.request).then(response => {
@@ -64,11 +59,11 @@ self.addEventListener('fetch', event => {
     }
 
     // Strategy 2: API Data (Network First, then Cache)
-    if (requestUrl.pathname.startsWith(API_URL_BASE)) {
+    // FIX: Check the full URL with requestUrl.href
+    if (requestUrl.href.startsWith(API_URL_BASE)) {
         event.respondWith(
             fetch(event.request)
                 .then(response => {
-                    // If we get a valid response, clone it and cache it
                     if (response && response.status === 200) {
                         const responseToCache = response.clone();
                         caches.open(CACHE_NAME).then(cache => {
@@ -78,7 +73,6 @@ self.addEventListener('fetch', event => {
                     return response;
                 })
                 .catch(() => {
-                    // If the network fails, try to get it from the cache
                     console.log('Network failed, serving API from cache for:', event.request.url);
                     return caches.match(event.request);
                 })
