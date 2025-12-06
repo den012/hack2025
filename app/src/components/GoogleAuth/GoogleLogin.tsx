@@ -11,6 +11,10 @@ const Login: React.FC = () => {
   const navigate = useNavigate();
   const API_URL = import.meta.env.VITE_API_URL;
 
+  const handleGuest = () => {
+    navigate("/home", { state: { isGuest: true } });
+  }
+
   const handleLogin = async () => {
     try {
       const result = await signInWithPopup(auth, provider);
@@ -37,7 +41,7 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="fh-full w-full bg-white flex flex-col items-center justify-center overflow-hidden font-sans text-[#1d1d1f] antialiased selection:bg-gray-200 relative">
+          <div className="h-screen w-full bg-white flex flex-col items-center justify-center overflow-hidden font-sans text-[#1d1d1f] antialiased selection:bg-gray-200 relative">
       {/* --- MAIN CONTENT --- */}
       {/* Folosim flex-col și gap pentru a distribui spațiul elegant */}
       {/* LOGO - Responsive: mai mic pe mobil (w-32), mai mare pe desktop (md:w-48) */}
@@ -91,7 +95,9 @@ const Login: React.FC = () => {
         </svg>
         <span>Sign in with Google</span>
       </button>
-      <button className="w-full p-4 md:w-auto md:min-w-[340px] flex items-center justify-center text-[#86868b] ">
+      <button 
+      onClick={handleGuest}
+      className="w-full p-4 md:w-auto md:min-w-[340px] flex items-center justify-center text-[#86868b] ">
         Continue as Guest
       </button>
 
@@ -104,7 +110,7 @@ const Login: React.FC = () => {
         <div className="flex-1 h-px bg-gray-300"></div>
       </div>
       {/* COPYRIGHT - Poziționat absolut jos, independent de fluxul principal */}
-      <footer className="bottom-0 w-full text-center py-4">
+      <footer className="absolute bottom-0 w-full text-center py-4">
         <p className="text-[#86868b] text-[10px] md:text-xs font-medium">
           © 2025 BunkerFinder Inc. All rights reserved.
         </p>

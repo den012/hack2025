@@ -1,22 +1,34 @@
 import React, { useEffect, useState } from 'react';
-import { onAuthStateChanged, type User } from 'firebase/auth';
+import { onAuthStateChanged, type IdTokenResult, type User } from 'firebase/auth';
 import { auth } from './GoogleAuth/Config';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 import L from 'leaflet';
+
+const guestUser = {
+    uid: 'guest',
+    displayName: 'Guest',
+    email: null,
+    photoURL: 'https://i.pinimg.com/474x/07/c4/72/07c4720d19a9e9edad9d0e939eca304a.jpg', 
+} as User;
 
 const Home: React.FC = () => {
     const [user, setUser] = useState<User | null>(null);
     const navigate = useNavigate();
+    const location = useLocation();
 
     const mapContainer = React.useRef<HTMLDivElement | null>(null);
     const mapInstance = React.useRef<L.Map | null>(null);
 
     useEffect(() => {
+        const isGuest = location.state?.isGuest;
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
             if (currentUser) {
                 setUser(currentUser);
-            } else {
+            } else if(isGuest) {
+                setUser(guestUser);
+            }
+            else {
                 navigate('/');
             }
         });
