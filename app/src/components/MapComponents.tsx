@@ -153,7 +153,15 @@ import {get, set} from 'idb-keyval';
 
 // Define types
 interface Coordinate { lat: number; lon: number; }
-interface Shelter { judet: string; localitate: string; adresa: string; lat: number; lon: number; distance?: number; }
+interface Shelter { 
+    judet: string;
+    localitate: string;
+    adresa: string; 
+    lat: number;
+    lon: number; 
+    distance?: number; 
+    viewCount?: number;
+}
 
 interface MapComponentProps {
     userLocation: Coordinate | null;
@@ -236,7 +244,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({ userLocation, shelte
 
         shelters.forEach(shelter => {
             const marker = L.marker([shelter.lat, shelter.lon], { icon: shelterIcon });
-            marker.bindPopup(`<b>${shelter.adresa}</b><br>${shelter.localitate}, ${shelter.judet}`);
+            marker.bindPopup(`<b>${shelter.adresa}</b><br>${shelter.localitate}, ${shelter.judet}${shelter.viewCount ? `<br>Views: ${shelter.viewCount}` : ''}`);
             marker.on('click', () => onShelterSelect(shelter));
             clusterGroupRef.current?.addLayer(marker);
         });
