@@ -1,6 +1,7 @@
-const CACHE_NAME = 'bunker-map-cache-v3'; // <-- Incremented cache version
-const API_URL_BASE = 'https://2bd3558eafcb.ngrok-free.app/api/getBunkers';
-const MAP_TILE_DOMAIN = 'tile.openstreetmap.org'; // <-- Renamed for clarity
+const CACHE_NAME = 'bunker-map-cache-v4'; // <-- Incremented cache version
+const API_HOST = '2bd3558eafcb.ngrok-free.app';
+const MAP_TILE_DOMAIN = 'tile.openstreetmap.org';
+const ROUTING_HOST = 'router.project-osrm.org'; // <-- Added routing host
 
 const APP_SHELL_URLS = [
     '/',
@@ -41,8 +42,14 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
     const requestUrl = new URL(event.request.url);
 
+    // --- FIX: Add a strategy to IGNORE routing requests ---
+    // Let the browser handle these requests directly.
+    // Your component logic already prevents them from being made when offline.
+    if (requestUrl.hostname === ROUTING_HOST) {
+        return; // Do nothing, let the request pass through.
+    }
+
     // Strategy 1: Map Tiles (Cache First, then Network)
-    // FIX: Check if hostname ENDS WITH the map tile domain
     if (requestUrl.hostname.endsWith(MAP_TILE_DOMAIN)) {
         event.respondWith(
             caches.open(CACHE_NAME).then(cache => {
@@ -59,8 +66,7 @@ self.addEventListener('fetch', event => {
     }
 
     // Strategy 2: API Data (Network First, then Cache)
-    // FIX: Check the full URL with requestUrl.href
-    if (requestUrl.href.startsWith(API_URL_BASE)) {
+    if (requestUrl.hostname === API_HOST) {
         event.respondWith(
             fetch(event.request)
                 .then(response => {
