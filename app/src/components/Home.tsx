@@ -27,6 +27,7 @@ const Home: React.FC = () => {
 
     const handleShelterSelect = (shelter : Shelter) => {
         setSelectedShelter(shelter);
+        setShowSidebar(false);
 
         console.log(shelter.adresa);
 
@@ -74,7 +75,7 @@ const Home: React.FC = () => {
                 {/* Map */}
                 <main className="flex-1 relative">
                     {!showSidebar && (
-                        <button onClick={() => setShowSidebar(true)} className="md:hidden absolute top-4 left-4 z-10 p-2 bg-white rounded-md shadow-lg">
+                        <button onClick={() => setShowSidebar(true)} className="md:hidden absolute top-20 left-3 z-10 p-2 bg-white rounded-md shadow-lg">
                             ☰
                         </button>
                     )}
