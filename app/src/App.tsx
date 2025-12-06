@@ -2,10 +2,11 @@ import React from 'react';
 import axios from 'axios';
 
 const App: React.FC = () => {
+  const API_URL = import.meta.env.env.VITE_API_URL;
   const [response, setReponse ] = React.useState<string>('');
   const fetchData = async () => {
     try {
-      const response = await axios.get('http://localhost:8080/greet', {
+      const response = await axios.get(`${API_URL}/greet`, {
         headers: {
           "Content-Type": "application/json",
           "ngrok-skip-browser-warning": "true"
