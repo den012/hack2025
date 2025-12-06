@@ -113,17 +113,22 @@ const Home: React.FC = () => {
                     params: { lat: userLocation.lat, lon: userLocation.lon, range: 0.5 }
                 });
 
-                // Calculate distance for each shelter and sort them
-                const sheltersWithDistance = response.data.map((shelter: Shelter) => ({
-                    ...shelter,
-                    distance: getDistance(userLocation.lat, userLocation.lon, shelter.lat, shelter.lon)
-                }));
+                if (Array.isArray(response.data)) {
+                    const sheltersWithDistance = response.data.map((shelter: Shelter) => ({
+                        ...shelter,
+                        distance: getDistance(userLocation.lat, userLocation.lon, shelter.lat, shelter.lon)
+                    }));
 
-                sheltersWithDistance.sort((a: Shelter, b: Shelter) => b.distance! - a.distance!);
+                    sheltersWithDistance.sort((a: Shelter, b: Shelter) => a.distance! - b.distance!);
 
-                setShelters(sheltersWithDistance);
+                    setShelters(sheltersWithDistance);
+                } else {
+                    console.warn("API did not return an array for shelters:", response.data);
+                    setShelters([]); 
+                }
             } catch (error) {
                 console.error("Error fetching shelters:", error);
+                setShelters([]); 
             }
         };
 
