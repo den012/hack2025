@@ -119,7 +119,7 @@ const Home: React.FC = () => {
                     distance: getDistance(userLocation.lat, userLocation.lon, shelter.lat, shelter.lon)
                 }));
 
-                sheltersWithDistance.sort((a, b) => a.distance - b.distance);
+                sheltersWithDistance.sort((a: Shelter, b: Shelter) => b.distance! - a.distance!);
 
                 setShelters(sheltersWithDistance);
             } catch (error) {
