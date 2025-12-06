@@ -1,103 +1,50 @@
-const CACHE_NAME = 'bunker-map-cache-v5'; // <-- Incremented cache version
+import { cleanupOutdatedCaches, precacheAndRoute } from 'workbox-precaching'
+import { registerRoute } from 'workbox-routing'
+import { CacheFirst, NetworkFirst } from 'workbox-strategies'
+import { CacheableResponsePlugin } from 'workbox-cacheable-response'
+
+// --- 1. Core Workbox Setup ---
+// Cleans up old caches from previous versions of the service worker.
+cleanupOutdatedCaches()
+
+// This is the placeholder that vite-plugin-pwa will fill with the list of all your app's files.
+// This handles caching your entire app shell automatically.
+precacheAndRoute(self.__WB_MANIFEST)
+
+// --- 2. Define Constants ---
 const API_HOST = '2bd3558eafcb.ngrok-free.app';
 const MAP_TILE_DOMAIN = 'tile.openstreetmap.org';
-const ROUTING_HOST = 'router.project-osrm.org';
 
-const APP_SHELL_URLS = [
-    '/',
-    '/index.html',
-    // IMPORTANT: You may need to update these filenames after your next build
-    '/assets/index-CDVKvM6r.js',
-    '/assets/index-Dc6UIqLD.css'
-];
+// --- 3. Runtime Caching Strategies ---
 
-// ... (install and activate events are the same) ...
-self.addEventListener('install', event => {
-    event.waitUntil(
-        caches.open(CACHE_NAME)
-            .then(cache => {
-                console.log('Service Worker: Caching App Shell');
-                return cache.addAll(APP_SHELL_URLS);
-            })
-            .catch(error => {
-                console.error('Failed to cache app shell:', error);
-            })
-    );
-});
+// Strategy for Map Tiles: Cache First
+// Serve from cache immediately, fall back to network.
+registerRoute(
+  ({ request, url }) => request.destination === 'image' && url.hostname.endsWith(MAP_TILE_DOMAIN),
+  new CacheFirst({
+    cacheName: 'map-tiles-cache',
+    plugins: [
+      new CacheableResponsePlugin({
+        statuses: [0, 200], // Cache successful responses and opaque responses (for CORS images)
+      }),
+    ],
+  })
+);
 
-self.addEventListener('activate', event => {
-    event.waitUntil(
-        caches.keys().then(cacheNames => {
-            return Promise.all(
-                cacheNames.map(cacheName => {
-                    if (cacheName !== CACHE_NAME) {
-                        console.log('Service Worker: Deleting old cache', cacheName);
-                        return caches.delete(cacheName);
-                    }
-                })
-            );
-        })
-    );
-});
+// Strategy for API Data: Network First
+// Try the network first to get the latest data, fall back to cache if offline.
+registerRoute(
+  ({ url }) => url.hostname === API_HOST,
+  new NetworkFirst({
+    cacheName: 'api-data-cache',
+    plugins: [
+      new CacheableResponsePlugin({
+        statuses: [200], // Only cache successful responses
+      }),
+    ],
+  })
+);
 
-
-self.addEventListener('fetch', event => {
-    const requestUrl = new URL(event.request.url);
-
-    if (requestUrl.hostname === ROUTING_HOST) {
-        return;
-    }
-
-    if (requestUrl.hostname.endsWith(MAP_TILE_DOMAIN)) {
-        event.respondWith(
-            caches.open(CACHE_NAME).then(cache => {
-                return cache.match(event.request).then(response => {
-                    const fetchPromise = fetch(event.request).then(networkResponse => {
-                        cache.put(event.request, networkResponse.clone());
-                        return networkResponse;
-                    });
-                    return response || fetchPromise;
-                });
-            })
-        );
-        return;
-    }
-
-    if (requestUrl.hostname === API_HOST) {
-        event.respondWith(
-            fetch(event.request)
-                .then(response => {
-                    if (response && response.status === 200) {
-                        const responseToCache = response.clone();
-                        caches.open(CACHE_NAME).then(cache => {
-                            cache.put(event.request, responseToCache);
-                        });
-                    }
-                    return response;
-                })
-                .catch(() => {
-                    console.log('Network failed, serving API from cache for:', event.request.url);
-                    return caches.match(event.request);
-                })
-        );
-        return;
-    }
-
-    // --- FIX: Strategy 3: App Shell & Other Assets (with SPA fallback) ---
-    event.respondWith(
-        caches.match(event.request)
-            .then(response => {
-                // If a match is found in the cache, return it.
-                if (response) {
-                    return response;
-                }
-                // For failed navigation requests, serve index.html as a fallback.
-                if (event.request.mode === 'navigate') {
-                    console.log('Serving index.html for navigation request:', event.request.url);
-                    return caches.match('/index.html');
-                }
-                // For other failed requests (e.g., images), try to fetch from the network.
-                return fetch(event.request);
-            })
-    );
-});
+// By not defining a route for 'router.project-osrm.org' or 'vercel.live',
+// we are implicitly telling the service worker to ignore them.
+// The browser will handle these requests normally.
