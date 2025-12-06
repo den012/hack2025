@@ -13,6 +13,7 @@
     "@tailwindcss/vite": "^4.1.17",
     "axios": "^1.13.2",
     "firebase": "^12.6.0",
+    "idb-keyval": "^6.2.2",
     "leaflet": "^1.9.4",
     "leaflet-routing-machine": "^3.2.12",
     "leaflet.markercluster": "^1.5.3",
@@ -36,6 +37,7 @@
     "globals": "^16.5.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
-    "vite": "^7.2.4"
+    "vite": "^7.2.4",
+    "vite-plugin-pwa": "^1.2.0"
   }
 }

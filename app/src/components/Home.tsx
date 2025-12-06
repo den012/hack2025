@@ -4,8 +4,19 @@ import { useGeolocation } from './hooks/useGeolocation';
 import { useShelters } from './hooks/useShelters';
 import { MapComponent } from './MapComponents';
 import { Sidebar } from './Sidebar';
+import axios from 'axios';
+
+interface Shelter {
+    judet: string;
+    localitate: string;
+    adresa: string;
+    lat: number;
+    lon: number;
+    distance?: number;
+}
 
 const Home: React.FC = () => {
+    const API_URL = import.meta.env.VITE_API_URL;
     const user = useAuth();
     const userLocation = useGeolocation();
     const shelters = useShelters(userLocation);
@@ -13,6 +24,24 @@ const Home: React.FC = () => {
     const [selectedShelter, setSelectedShelter] = useState<any | null>(null);
     const [showAllShelters, setShowAllShelters] = useState(false);
     const [showSidebar, setShowSidebar] = useState(false);
+
+    const handleShelterSelect = (shelter : Shelter) => {
+        setSelectedShelter(shelter);
+
+        console.log(shelter.adresa);
+
+        const postData = {
+            adresa : shelter.adresa
+        };
+
+        const config = {
+            headers: {
+                "ngrok-skip-browser-warning": "true"
+            }
+        }
+
+        axios.post(`${API_URL}/api/trackBunkerView`, postData, config).catch(error => console.error('failed to track bunker view', error))
+    };
 
     if (!user) {
         return <div>Loading...</div>;
@@ -35,7 +64,7 @@ const Home: React.FC = () => {
                     <Sidebar
                         shelters={shelters}
                         selectedShelter={selectedShelter}
-                        onShelterSelect={setSelectedShelter}
+                        onShelterSelect={handleShelterSelect}
                         showAllShelters={showAllShelters}
                         onShowAll={() => setShowAllShelters(true)}
                         onClose={() => setShowSidebar(false)}
@@ -53,7 +82,7 @@ const Home: React.FC = () => {
                         userLocation={userLocation}
                         shelters={shelters}
                         selectedShelter={selectedShelter}
-                        onShelterSelect={setSelectedShelter}
+                        onShelterSelect={handleShelterSelect}
                     />
                 </main>
             </div>
