@@ -21,7 +21,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ shelters, selectedShelter, onS
             </div>
             <h2 className="px-4 py-3 m-0 border-b border-gray-300 text-lg font-semibold">Nearby Shelters</h2>
             {shelters.length > 0 ? (
-                <ul className="list-none m-0 p-0">
+                <ul className="list-none m-0 p-0 overflow-y-auto h-full">
                     {sheltersToShow.map((shelter, index) => (
                         <li key={index} onClick={() => onShelterSelect(shelter)} className={`px-4 py-3 cursor-pointer border-b border-gray-200 ${selectedShelter === shelter ? 'bg-indigo-50' : 'bg-transparent'}`}>
                             <strong className="block text-sm">{shelter.adresa}</strong>

@@ -21,7 +21,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({ userLocation, shelte
     const userMarkerRef = useRef<L.Marker | null>(null);
     const routingControlRef = useRef<L.Routing.Control | null>(null);
 
-    // Effect 1: Create map and handle user marker
+    // Effect 1: Manages map creation AND user location updates
     useEffect(() => {
         // Don't do anything until we have a location and a container
         if (!userLocation || !mapContainerRef.current) {
@@ -30,29 +30,32 @@ export const MapComponent: React.FC<MapComponentProps> = ({ userLocation, shelte
 
         // If the map hasn't been created yet, create it
         if (!mapInstanceRef.current) {
-            const map = L.map(mapContainerRef.current).setView([userLocation.lat, userLocation.lon], 15);
+            const map = L.map(mapContainerRef.current);
             mapInstanceRef.current = map;
 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             }).addTo(map);
-
-            const userIcon = L.divIcon({
-                className: 'custom-user-marker',
-                html: `<div style="background-color: #3b82f6; width: 24px; height: 24px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.4), 0 2px 4px rgba(0,0,0,0.3);"></div>`,
-                iconSize: [24, 24],
-                iconAnchor: [12, 12]
-            });
-            userMarkerRef.current = L.marker([userLocation.lat, userLocation.lon], { icon: userIcon, zIndexOffset: 1000 }).addTo(map);
-        } else {
-            // If map already exists, just update view and marker position
-            mapInstanceRef.current.setView([userLocation.lat, userLocation.lon], 15);
-            if (userMarkerRef.current) {
-                userMarkerRef.current.setLatLng([userLocation.lat, userLocation.lon]);
-            }
         }
 
-    }, [userLocation]); // This effect now correctly depends on userLocation
+        // Now, handle the view and marker (whether map is new or existing)
+        const map = mapInstanceRef.current;
+        map.setView([userLocation.lat, userLocation.lon], 15);
+
+        const userIcon = L.divIcon({
+            className: 'custom-user-marker',
+            html: `<div style="background-color: #3b82f6; width: 24px; height: 24px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.4), 0 2px 4px rgba(0,0,0,0.3);"></div>`,
+            iconSize: [24, 24],
+            iconAnchor: [12, 12]
+        });
+
+        if (userMarkerRef.current) {
+            userMarkerRef.current.setLatLng([userLocation.lat, userLocation.lon]);
+        } else {
+            userMarkerRef.current = L.marker([userLocation.lat, userLocation.lon], { icon: userIcon, zIndexOffset: 1000 }).addTo(map);
+        }
+
+    }, [userLocation]); // This effect now correctly handles both creation and updates
 
     // Effect 2: Render shelter markers
     useEffect(() => {
@@ -104,7 +107,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({ userLocation, shelte
                 }),
                 show: false,
                 addWaypoints: false,
-                // @ts-ignore - Type definition is missing this valid option
+                // @ts-ignore
                 createMarker: () => null,
                 lineOptions: {
                     styles: [{ color: '#3b82f6', opacity: 0.8, weight: 6 }],
@@ -115,11 +118,12 @@ export const MapComponent: React.FC<MapComponentProps> = ({ userLocation, shelte
         }
     }, [selectedShelter, userLocation]);
 
-    // Cleanup effect to remove map on component unmount
+    // Final cleanup effect to remove map on component unmount
     useEffect(() => {
         return () => {
             if (mapInstanceRef.current) {
                 mapInstanceRef.current.remove();
+                mapInstanceRef.current = null;
             }
         };
     }, []);
