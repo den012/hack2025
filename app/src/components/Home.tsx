@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { onAuthStateChanged, type IdTokenResult, type User } from 'firebase/auth';
+import { onAuthStateChanged, type User } from 'firebase/auth';
 import { auth } from './GoogleAuth/Config';
 import { useLocation, useNavigate } from 'react-router-dom';
 
