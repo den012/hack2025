@@ -1,7 +1,7 @@
-const CACHE_NAME = 'bunker-map-cache-v4'; // <-- Incremented cache version
+const CACHE_NAME = 'bunker-map-cache-v5'; // <-- Incremented cache version
 const API_HOST = '2bd3558eafcb.ngrok-free.app';
 const MAP_TILE_DOMAIN = 'tile.openstreetmap.org';
-const ROUTING_HOST = 'router.project-osrm.org'; // <-- Added routing host
+const ROUTING_HOST = 'router.project-osrm.org';
 
 const APP_SHELL_URLS = [
     '/',
@@ -11,6 +11,7 @@ const APP_SHELL_URLS = [
     '/assets/index-Dc6UIqLD.css'
 ];
 
+// ... (install and activate events are the same) ...
 self.addEventListener('install', event => {
     event.waitUntil(
         caches.open(CACHE_NAME)
@@ -39,17 +40,14 @@ self.addEventListener('activate', event => {
     );
 });
 
+
 self.addEventListener('fetch', event => {
     const requestUrl = new URL(event.request.url);
 
-    // --- FIX: Add a strategy to IGNORE routing requests ---
-    // Let the browser handle these requests directly.
-    // Your component logic already prevents them from being made when offline.
     if (requestUrl.hostname === ROUTING_HOST) {
-        return; // Do nothing, let the request pass through.
+        return;
     }
 
-    // Strategy 1: Map Tiles (Cache First, then Network)
     if (requestUrl.hostname.endsWith(MAP_TILE_DOMAIN)) {
         event.respondWith(
             caches.open(CACHE_NAME).then(cache => {
@@ -65,7 +63,6 @@ self.addEventListener('fetch', event => {
         return;
     }
 
-    // Strategy 2: API Data (Network First, then Cache)
     if (requestUrl.hostname === API_HOST) {
         event.respondWith(
             fetch(event.request)
@@ -86,11 +83,21 @@ self.addEventListener('fetch', event => {
         return;
     }
 
-    // Strategy 3: App Shell & Other Assets (Cache First)
+    // --- FIX: Strategy 3: App Shell & Other Assets (with SPA fallback) ---
     event.respondWith(
         caches.match(event.request)
             .then(response => {
-                return response || fetch(event.request);
+                // If a match is found in the cache, return it.
+                if (response) {
+                    return response;
+                }
+                // For failed navigation requests, serve index.html as a fallback.
+                if (event.request.mode === 'navigate') {
+                    console.log('Serving index.html for navigation request:', event.request.url);
+                    return caches.match('/index.html');
+                }
+                // For other failed requests (e.g., images), try to fetch from the network.
+                return fetch(event.request);
             })
     );
 });
