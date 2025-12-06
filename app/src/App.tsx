@@ -2,7 +2,7 @@ import React from 'react';
 import axios from 'axios';
 
 const App: React.FC = () => {
-  const API_URL = import.meta.env.env.VITE_API_URL;
+  const API_URL = import.meta.env.VITE_API_URL;
   const [response, setReponse ] = React.useState<string>('');
   const fetchData = async () => {
     try {
