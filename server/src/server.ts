@@ -27,6 +27,7 @@ import chalk from 'chalk';
 import db from './database/database';
 
 import userRoutes from './routes/authRoutes';
+import bunkerRoutes from './routes/bunkerRoutes';
 
 //routes
 
@@ -42,6 +43,7 @@ app.use(cors());
 app.use(cookieParser());
 
 app.use('/api', userRoutes);
+app.use('/api', bunkerRoutes);
 
 app.get('/', (req, res) => {
     res.send('Hello World!');
