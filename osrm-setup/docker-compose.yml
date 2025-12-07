@@ -1,0 +1,20 @@
+version: "3.8"
+
+services:
+  osrm:
+    image: osrm/osrm-backend:latest   # use official prebuilt image
+    container_name: osrm-server
+    platform: linux/amd64             # <-- required for M1/M2
+    ports:
+      - "5001:5000"                   # host:container port mapping
+    volumes:
+      - ./data:/data                  # mount your manually downloaded .pbf
+    command: >
+      sh -c "
+        if [ ! -f /data/romania-latest.osrm ]; then
+          echo 'Preparing OSRM data...';
+          /data/prepare.sh;
+        fi;
+        echo 'Starting OSRM server...';
+        osrm-routed --algorithm mld /data/romania-latest.osrm
+      "
