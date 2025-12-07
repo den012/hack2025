@@ -345,6 +345,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({ userLocation, shelte
     const [isOnline, setIsOnline] = useState(navigator.onLine);
 
     const [isFollowingUser, setIsFollowingUser] = useState(true);
+    const [isNavigating, setIsNavigating] = useState(false);
 
     // Listen for online/offline status changes
     useEffect(() => {
@@ -498,6 +499,11 @@ export const MapComponent: React.FC<MapComponentProps> = ({ userLocation, shelte
             routingControlRef.current = null;
         }
 
+        if(!selectedShelter) {
+            setIsNavigating(false);
+            return;
+        }
+
         if (!selectedShelter || !userLocation) {
             setIsFollowingUser(false);
             return;
@@ -555,13 +561,30 @@ export const MapComponent: React.FC<MapComponentProps> = ({ userLocation, shelte
                 }
             });
         }
-    }, [selectedShelter, userLocation, isOnline]);
+    }, [selectedShelter, userLocation, isOnline, isNavigating, OSRM_URL]);
 
     // return <div ref={mapContainerRef} className="w-full h-full z-5" />;
 
     return (
         <div style={{ position: 'relative', width: '100%', height: '100%' }}>
             <div ref={mapContainerRef} className="w-full h-full z-5" />
+
+            {selectedShelter && !isNavigating && (
+                <button
+                    onClick={() => setIsNavigating(true)}
+                    className="absolute bottom-[30px] left-1/2 -translate-x-1/2 z-[1000] bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-full shadow-lg"
+                >
+                    Start Navigation
+                </button>
+            )}
+            {isNavigating && (
+                <button
+                    onClick={() => setIsNavigating(false)}
+                    className="absolute bottom-[30px] left-1/2 -translate-x-1/2 z-[1000] bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-full shadow-lg"
+                >
+                    Stop Navigation
+                </button>
+            )}
 
             {/* Recenter Button: Appears only when follow mode is off and a route is active */}
             {!isFollowingUser && selectedShelter && (

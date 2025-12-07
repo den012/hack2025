@@ -7,7 +7,8 @@ import {VitePWA} from "vite-plugin-pwa";
 export default defineConfig({
   server: {
     proxy: {
-      '/greet': process.env.VITE_API_URL || 'http://localhost:8080'
+      '/greet': process.env.VITE_API_URL || 'http://localhost:8080',
+      '/osrm': 'https://o7aiyr-ip-5-2-197-133.tunnelmole.net'
     }
   },
   plugins: [

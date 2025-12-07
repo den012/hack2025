@@ -114,7 +114,7 @@ interface Shelter {
 const Home: React.FC = () => {
     const API_URL = import.meta.env.VITE_API_URL;
     const user = useAuth();
-    const [isDemoMode, setIsDemoMode] = useState(true); // State to control demo mode
+    // const [isDemoMode, setIsDemoMode] = useState(true); // State to control demo mode
     const { location: userLocation } = useGeolocation(false);
     const shelters = useShelters(userLocation);
 
@@ -156,7 +156,7 @@ const Home: React.FC = () => {
                         {user.email && <p className="m-0 text-xs text-gray-600">{user.email}</p>}
                     </div>
                 </div>
-                <button
+                {/* <button
                     onClick={() => setIsDemoMode(isDemoMode)}
                     className={`px-3 py-2 rounded-md text-xs font-bold transition-colors ${
                         isDemoMode
@@ -165,7 +165,7 @@ const Home: React.FC = () => {
                     }`}
                 >
                     {isDemoMode ? 'DEMO ON' : 'DEMO OFF'}
-                </button>
+                </button> */}
             </header>
 
             <div className="flex flex-1 overflow-hidden">
