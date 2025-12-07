@@ -313,6 +313,7 @@ interface MapComponentProps {
     shelters: Shelter[];
     selectedShelter: Shelter | null;
     onShelterSelect: (shelter: Shelter) => void;
+    showSidebar: boolean;
 }
 
 const getDistance = (from: Coordinate, to: Coordinate) => {
@@ -353,7 +354,7 @@ const getInstructionIcon = (text: string) => {
     return <svg xmlns="http://www.w3.org/2000/svg" className={iconClass} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>;
 };
 
-export const MapComponent: React.FC<MapComponentProps> = ({ userLocation, shelters, selectedShelter, onShelterSelect }) => {
+export const MapComponent: React.FC<MapComponentProps> = ({ userLocation, shelters, selectedShelter, onShelterSelect, showSidebar }) => {
     const OSRM_URL = import.meta.env.VITE_OSRM_URL;
 
 
@@ -617,7 +618,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({ userLocation, shelte
             )}
 
             {/* Navigation Control Buttons */}
-            {selectedShelter && !isNavigating && (
+            {selectedShelter && !isNavigating && !showSidebar && (
                 <button
                     onClick={() => setIsNavigating(true)}
                     className="absolute bottom-[30px] left-1/2 -translate-x-1/2 z-[1000] bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-full shadow-lg"

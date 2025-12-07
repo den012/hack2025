@@ -193,6 +193,7 @@ const Home: React.FC = () => {
                         shelters={shelters}
                         selectedShelter={selectedShelter}
                         onShelterSelect={handleShelterSelect}
+                        showSidebar={showSidebar}
                     />
                 </main>
             </div>
