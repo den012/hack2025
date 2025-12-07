@@ -88,8 +88,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ shelters, selectedShelter, onS
                     <div className="border-b border-gray-200">
                         <div className="px-4 py-4">
                             <div className="flex items-center gap-2 mb-3">
-                                <span className="text-xl">🔥</span>
-                                <h2 className="text-sm font-bold text-gray-800 m-0 uppercase tracking-wide">Trending Now</h2>
+                                <span className="text-xl"></span>
+                                <h2 className="text-sm font-bold text-gray-800 m-0 uppercase tracking-wide">Be aware! High demand</h2>
                             </div>
                             <div className="space-y-2">
                                 {topTrendingShelters.map((shelter, index) => (
