@@ -346,6 +346,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({ userLocation, shelte
 
     const [isFollowingUser, setIsFollowingUser] = useState(true);
     const [isNavigating, setIsNavigating] = useState(false);
+    const [currentInstruction, setCurrentInstruction] = useState<{ text: string; distance: number } | null>(null);
 
     // Listen for online/offline status changes
     useEffect(() => {
@@ -501,10 +502,12 @@ export const MapComponent: React.FC<MapComponentProps> = ({ userLocation, shelte
 
         if(!selectedShelter) {
             setIsNavigating(false);
+            setCurrentInstruction(null);
             return;
         }
 
         if (!selectedShelter || !userLocation) {
+            setCurrentInstruction(null);
             setIsFollowingUser(false);
             return;
         }
@@ -541,11 +544,19 @@ export const MapComponent: React.FC<MapComponentProps> = ({ userLocation, shelte
                     extendToWaypoints: true,
                     missingRouteTolerance: 0
                 }
-                // --- FIX: Add event listeners to log success and error ---
             }).on('routesfound', function(e) {
                 console.log('Route found:', e.routes[0]);
+                const route = e.routes[0];
+
+                if(route.instructions.length > 0) {
+                    setCurrentInstruction({
+                        text: route.instructions[0].text,
+                        distance: route.instructions[0].distance
+                    });
+                }
             }).on('routingerror', function(e) {
                 console.error('Routing control error:', e.error);
+                setCurrentInstruction({ text: "Error finding route.", distance: 0 });
             }).addTo(map);
         }
         else {
@@ -563,12 +574,23 @@ export const MapComponent: React.FC<MapComponentProps> = ({ userLocation, shelte
         }
     }, [selectedShelter, userLocation, isOnline, isNavigating, OSRM_URL]);
 
+    
+
     // return <div ref={mapContainerRef} className="w-full h-full z-5" />;
 
     return (
         <div style={{ position: 'relative', width: '100%', height: '100%' }}>
             <div ref={mapContainerRef} className="w-full h-full z-5" />
 
+            {/* Custom Navigation Instruction UI */}
+            {isNavigating && currentInstruction && (
+                <div className="absolute top-[15px] left-1/2 -translate-x-1/2 z-[1000] bg-white p-3 rounded-lg shadow-lg text-center max-w-[calc(100%-30px)]">
+                    <p className="text-lg font-bold text-gray-800 m-0">{currentInstruction.text}</p>
+                    {currentInstruction.distance > 0 && <p className="text-sm text-gray-600 m-0">in {Math.round(currentInstruction.distance)} meters</p>}
+                </div>
+            )}
+
+            {/* Navigation Control Buttons */}
             {selectedShelter && !isNavigating && (
                 <button
                     onClick={() => setIsNavigating(true)}
@@ -586,10 +608,15 @@ export const MapComponent: React.FC<MapComponentProps> = ({ userLocation, shelte
                 </button>
             )}
 
-            {/* Recenter Button: Appears only when follow mode is off and a route is active */}
-            {!isFollowingUser && selectedShelter && (
+            {/* Recenter Button: Appears only when follow mode is off */}
+            {!isFollowingUser && (
                 <button
-                    onClick={() => setIsFollowingUser(true)}
+                    onClick={() => {
+                        setIsFollowingUser(true);
+                        if (mapInstanceRef.current && userLocation) {
+                            mapInstanceRef.current.flyTo([userLocation.lat, userLocation.lon], 16);
+                        }
+                    }}
                     className="absolute bottom-[30px] right-[15px] z-[1000] bg-white p-[10px] rounded-full border-2 border-[#ccc] shadow-md cursor-pointer"
                     title="Recenter on me"
                 >
