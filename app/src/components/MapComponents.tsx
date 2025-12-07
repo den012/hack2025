@@ -313,6 +313,7 @@ interface MapComponentProps {
     shelters: Shelter[];
     selectedShelter: Shelter | null;
     onShelterSelect: (shelter: Shelter) => void;
+    showSidebar: boolean;
 }
 
 const getDistance = (from: Coordinate, to: Coordinate) => {
@@ -330,7 +331,30 @@ const getDistance = (from: Coordinate, to: Coordinate) => {
     return R * c; // in metres
 };
 
-export const MapComponent: React.FC<MapComponentProps> = ({ userLocation, shelters, selectedShelter, onShelterSelect }) => {
+const getInstructionIcon = (text: string) => {
+    const lowerText = text.toLowerCase();
+    const iconClass = "w-10 h-10 text-white flex-shrink-0"; // Common style for icons
+
+    if (lowerText.includes('turn left')) {
+        return <svg xmlns="http://www.w3.org/2000/svg" className={iconClass} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 10l-5 5 5 5"/><path d="M4 15h12a4 4 0 0 0 4-4V4"/></svg>;
+    }
+    if (lowerText.includes('turn right')) {
+        return <svg xmlns="http://www.w3.org/2000/svg" className={iconClass} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 10l5 5-5 5"/><path d="M20 15H8a4 4 0 0 1-4-4V4"/></svg>;
+    }
+    if (lowerText.includes('straight')) {
+        return <svg xmlns="http://www.w3.org/2000/svg" className={iconClass} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>;
+    }
+    if (lowerText.includes('u-turn')) {
+        return <svg xmlns="http://www.w3.org/2000/svg" className={iconClass} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 10a6 6 0 0 1-6 6h-2v4l-4-4 4-4v4h2a2 2 0 0 0 2-2V8"/></svg>;
+    }
+    if (lowerText.includes('arrive')) {
+        return <svg xmlns="http://www.w3.org/2000/svg" className={iconClass} viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>;
+    }
+    // Default icon (e.g., for "Head north")
+    return <svg xmlns="http://www.w3.org/2000/svg" className={iconClass} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>;
+};
+
+export const MapComponent: React.FC<MapComponentProps> = ({ userLocation, shelters, selectedShelter, onShelterSelect, showSidebar }) => {
     const OSRM_URL = import.meta.env.VITE_OSRM_URL;
 
 
@@ -345,6 +369,8 @@ export const MapComponent: React.FC<MapComponentProps> = ({ userLocation, shelte
     const [isOnline, setIsOnline] = useState(navigator.onLine);
 
     const [isFollowingUser, setIsFollowingUser] = useState(true);
+    const [isNavigating, setIsNavigating] = useState(false);
+    const [currentInstruction, setCurrentInstruction] = useState<{ text: string; distance: number } | null>(null);
 
     // Listen for online/offline status changes
     useEffect(() => {
@@ -498,7 +524,14 @@ export const MapComponent: React.FC<MapComponentProps> = ({ userLocation, shelte
             routingControlRef.current = null;
         }
 
+        if(!selectedShelter) {
+            setIsNavigating(false);
+            setCurrentInstruction(null);
+            return;
+        }
+
         if (!selectedShelter || !userLocation) {
+            setCurrentInstruction(null);
             setIsFollowingUser(false);
             return;
         }
@@ -535,11 +568,19 @@ export const MapComponent: React.FC<MapComponentProps> = ({ userLocation, shelte
                     extendToWaypoints: true,
                     missingRouteTolerance: 0
                 }
-                // --- FIX: Add event listeners to log success and error ---
             }).on('routesfound', function(e) {
                 console.log('Route found:', e.routes[0]);
+                const route = e.routes[0];
+
+                if(route.instructions.length > 0) {
+                    setCurrentInstruction({
+                        text: route.instructions[0].text,
+                        distance: route.instructions[0].distance
+                    });
+                }
             }).on('routingerror', function(e) {
                 console.error('Routing control error:', e.error);
+                setCurrentInstruction({ text: "Error finding route.", distance: 0 });
             }).addTo(map);
         }
         else {
@@ -555,7 +596,9 @@ export const MapComponent: React.FC<MapComponentProps> = ({ userLocation, shelte
                 }
             });
         }
-    }, [selectedShelter, userLocation, isOnline]);
+    }, [selectedShelter, userLocation, isOnline, isNavigating, OSRM_URL]);
+
+    
 
     // return <div ref={mapContainerRef} className="w-full h-full z-5" />;
 
@@ -563,10 +606,43 @@ export const MapComponent: React.FC<MapComponentProps> = ({ userLocation, shelte
         <div style={{ position: 'relative', width: '100%', height: '100%' }}>
             <div ref={mapContainerRef} className="w-full h-full z-5" />
 
-            {/* Recenter Button: Appears only when follow mode is off and a route is active */}
-            {!isFollowingUser && selectedShelter && (
+            {/* Custom Navigation Instruction UI */}
+            {isNavigating && currentInstruction && (
+                <div className="absolute top-[15px] left-1/2 -translate-x-1/2 z-[1000] bg-blue-500 text-white p-3 rounded-lg shadow-lg flex items-center gap-4 max-w-[calc(100%-30px)]">
+                    {getInstructionIcon(currentInstruction.text)}
+                    <div className="text-left">
+                        <p className="text-xl font-bold m-0">{currentInstruction.text}</p>
+                        {currentInstruction.distance > 0 && <p className="text-base font-semibold m-0">in {Math.round(currentInstruction.distance)} meters</p>}
+                    </div>
+                </div>
+            )}
+
+            {/* Navigation Control Buttons */}
+            {selectedShelter && !isNavigating && !showSidebar && (
                 <button
-                    onClick={() => setIsFollowingUser(true)}
+                    onClick={() => setIsNavigating(true)}
+                    className="absolute bottom-[30px] left-1/2 -translate-x-1/2 z-[1000] bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-full shadow-lg"
+                >
+                    Start Navigation
+                </button>
+            )}
+            {isNavigating && (
+                <button
+                    onClick={() => setIsNavigating(false)}
+                    className="absolute bottom-[30px] left-1/2 -translate-x-1/2 z-[1000] bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-full shadow-lg"
+                >
+                    Stop Navigation
+                </button>
+            )}
+
+            {!isFollowingUser && (
+                <button
+                    onClick={() => {
+                        setIsFollowingUser(true);
+                        if (mapInstanceRef.current && userLocation) {
+                            mapInstanceRef.current.flyTo([userLocation.lat, userLocation.lon], 16);
+                        }
+                    }}
                     className="absolute bottom-[30px] right-[15px] z-[1000] bg-white p-[10px] rounded-full border-2 border-[#ccc] shadow-md cursor-pointer"
                     title="Recenter on me"
                 >

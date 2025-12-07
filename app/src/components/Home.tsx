@@ -114,7 +114,7 @@ interface Shelter {
 const Home: React.FC = () => {
     const API_URL = import.meta.env.VITE_API_URL;
     const user = useAuth();
-    const [isDemoMode, setIsDemoMode] = useState(true); // State to control demo mode
+    // const [isDemoMode, setIsDemoMode] = useState(true); // State to control demo mode
     const { location: userLocation } = useGeolocation(false);
     const shelters = useShelters(userLocation);
 
@@ -150,13 +150,34 @@ const Home: React.FC = () => {
             {/* Header */}
             <header className="p-3 bg-gray-100 border-b border-gray-300 flex items-center justify-between z-10">
                 <div className="flex items-center">
-                    {user.photoURL && <img src={user.photoURL} alt="Profile" className="rounded-full w-10 h-10 mr-3" />}
-                    <div>
-                        <strong>Welcome, {user.displayName}!</strong>
-                        {user.email && <p className="m-0 text-xs text-gray-600">{user.email}</p>}
+                    <div className="flex items-center">
+                        {user.photoURL && (
+                            <img
+                                src={user.photoURL}
+                                alt="Profile"
+                                className="rounded-full w-10 h-10 mr-3"
+                            />
+                        )}
+                        <div>
+                            <strong>Welcome, {user.displayName}!</strong>
+                            {user.email && (
+                                <p className="m-0 text-xs text-gray-600">{user.email}</p>
+                            )}
+                        </div>
                     </div>
+
+                    <a
+                        href="https://buymeacoffee.com"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="items-center gap-2 px-3 py-2 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold rounded-full transition-all duration-200 shadow-md hover:shadow-lg text-sm ml-10"
+                        title="Support this project"
+                    >
+                        <span>☕</span>
+                        <span>Buy me coffee</span>
+                    </a>
                 </div>
-                <button
+                {/* <button
                     onClick={() => setIsDemoMode(isDemoMode)}
                     className={`px-3 py-2 rounded-md text-xs font-bold transition-colors ${
                         isDemoMode
@@ -165,8 +186,9 @@ const Home: React.FC = () => {
                     }`}
                 >
                     {isDemoMode ? 'DEMO ON' : 'DEMO OFF'}
-                </button>
+                </button> */}
             </header>
+
 
             <div className="flex flex-1 overflow-hidden">
                 {/* Sidebar */}
@@ -193,6 +215,7 @@ const Home: React.FC = () => {
                         shelters={shelters}
                         selectedShelter={selectedShelter}
                         onShelterSelect={handleShelterSelect}
+                        showSidebar={showSidebar}
                     />
                 </main>
             </div>
