@@ -2,17 +2,18 @@ import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet.markercluster';
 import 'leaflet-routing-machine';
-import {get, set} from 'idb-keyval';
+import { get, set } from 'idb-keyval';
+
 
 // Define types
 interface Coordinate { lat: number; lon: number; }
-interface Shelter { 
+interface Shelter {
     judet: string;
     localitate: string;
-    adresa: string; 
+    adresa: string;
     lat: number;
-    lon: number; 
-    distance?: number; 
+    lon: number;
+    distance?: number;
     viewCount?: number;
 }
 
@@ -23,6 +24,21 @@ interface MapComponentProps {
     onShelterSelect: (shelter: Shelter) => void;
 }
 
+const getDistance = (from: Coordinate, to: Coordinate) => {
+    const R = 6371e3; // Earth's radius in metres
+    const φ1 = from.lat * Math.PI / 180;
+    const φ2 = to.lat * Math.PI / 180;
+    const Δφ = (to.lat - from.lat) * Math.PI / 180;
+    const Δλ = (to.lon - from.lon) * Math.PI / 180;
+
+    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+              Math.cos(φ1) * Math.cos(φ2) *
+              Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c; // in metres
+};
+
 export const MapComponent: React.FC<MapComponentProps> = ({ userLocation, shelters, selectedShelter, onShelterSelect }) => {
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapInstanceRef = useRef<L.Map | null>(null);
@@ -30,7 +46,11 @@ export const MapComponent: React.FC<MapComponentProps> = ({ userLocation, shelte
     const userMarkerRef = useRef<L.Marker | null>(null);
     const routingControlRef = useRef<L.Routing.Control | L.Polyline | null>(null);
 
+    const lastPrefetchLocationRef = useRef<Coordinate | null>(null);
+
     const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+    const [isFollowingUser, setIsFollowingUser] = useState(false);
 
     // Listen for online/offline status changes
     useEffect(() => {
@@ -45,15 +65,15 @@ export const MapComponent: React.FC<MapComponentProps> = ({ userLocation, shelte
     }, []);
 
     // Effect 1: Initialize map instance (runs only once)
-        useEffect(() => {
+    useEffect(() => {
         if (!mapContainerRef.current || mapInstanceRef.current) {
             return;
         }
 
         // Initialize the map.
         const map = L.map(mapContainerRef.current, {
-            zoomControl: true 
-        }).setView([46.7712, 23.6236], 7);
+            zoomControl: true
+        }).setView([46.7712, 23.6236], 13);
 
         //Humanitarian (HOT) tile layer
         L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
@@ -61,6 +81,9 @@ export const MapComponent: React.FC<MapComponentProps> = ({ userLocation, shelte
             maxZoom: 19
         }).addTo(map);
 
+        map.on('dragstart', () => {
+            setIsFollowingUser(false);
+        });
 
         mapInstanceRef.current = map;
 
@@ -78,19 +101,31 @@ export const MapComponent: React.FC<MapComponentProps> = ({ userLocation, shelte
         const map = mapInstanceRef.current;
         if (!map || !userLocation) return;
 
-        map.setView([userLocation.lat, userLocation.lon], 15);
+        // map.setView([userLocation.lat, userLocation.lon], 15);
+
         const userIcon = L.divIcon({
             className: 'custom-user-marker',
             html: `<div style="background-color: #3b82f6; width: 24px; height: 24px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.4), 0 2px 4px rgba(0,0,0,0.3);"></div>`,
             iconSize: [24, 24], iconAnchor: [12, 12]
         });
 
-        if (userMarkerRef.current) {
-            userMarkerRef.current.setLatLng([userLocation.lat, userLocation.lon]);
-        } else {
+        if (!userMarkerRef.current) {
+            //create marker
             userMarkerRef.current = L.marker([userLocation.lat, userLocation.lon], { icon: userIcon, zIndexOffset: 1000 }).addTo(map);
+
+            //fly to user location
+            map.flyTo([userLocation.lat, userLocation.lon], 16, { animate: true });
+        } else {
+            const oldLatLng = userMarkerRef.current.getLatLng();
+            if (oldLatLng.lat !== userLocation.lat || oldLatLng.lng !== userLocation.lon) {
+                userMarkerRef.current.setLatLng([userLocation.lat, userLocation.lon]);
+
+                if (isFollowingUser) {
+                    map.panTo([userLocation.lat, userLocation.lon], { animate: true });
+                }
+            }
         }
-    }, [userLocation]);
+    }, [userLocation, isFollowingUser]);
 
     // Effect 3: Render shelter markers
     useEffect(() => {
@@ -117,12 +152,29 @@ export const MapComponent: React.FC<MapComponentProps> = ({ userLocation, shelte
     // Effect 4: Pre-fetch and cache routes for the 2 closest shelters
     useEffect(() => {
         if (!isOnline || !userLocation || shelters.length < 1) return;
+
+        const PREFETCHED_DISTANCE_THRESHOLD = 200;
+
+        if(lastPrefetchLocationRef.current) {
+            const distanceMoved = getDistance(lastPrefetchLocationRef.current, userLocation);
+            if(distanceMoved < PREFETCHED_DISTANCE_THRESHOLD) {
+                return; // Skip prefetching if user hasn't moved enough
+            }
+        }
+
+        lastPrefetchLocationRef.current = userLocation;
+        console.log("user moved prefetching routes...");
+
         const twoClosestShelters = shelters.slice(0, 2);
-        const router = L.Routing.osrmv1({ serviceUrl: `https://router.project-osrm.org/route/v1`, profile: 'foot' });
+
+        const router = L.Routing.osrmv1({
+            serviceUrl: 'https://ka9yst-ip-5-2-197-133.tunnelmole.net/route/v1',
+            profile: 'foot'
+        });
 
         twoClosestShelters.forEach(shelter => {
             const waypoints = [{ latLng: L.latLng(userLocation.lat, userLocation.lon) }, { latLng: L.latLng(shelter.lat, shelter.lon) }];
-            
+
             // Check IndexedDB first
             get(shelter.adresa).then(cachedRoute => {
                 if (!cachedRoute) { // Only fetch if not already in DB
@@ -152,14 +204,35 @@ export const MapComponent: React.FC<MapComponentProps> = ({ userLocation, shelte
             routingControlRef.current = null;
         }
 
-        if (!selectedShelter || !userLocation) return;
+        if (!selectedShelter || !userLocation) {
+            setIsFollowingUser(false);
+            return;
+        }
 
-        map.flyTo([userLocation.lat, userLocation.lon], 19, {animate: true});
+        setIsFollowingUser(true);
+        map.flyTo([userLocation.lat, userLocation.lon], 19, { animate: true });
 
+        // if (isOnline) {
+        //     routingControlRef.current = L.Routing.control({
+        //         waypoints: [L.latLng(userLocation.lat, userLocation.lon), L.latLng(selectedShelter.lat, selectedShelter.lon)],
+        //         router: new (CustomOSMRRouter as any)({ serviceUrl: `https://996a78555aed.ngrok-free.app/route/v1`, profile: 'foot' }),
+        //         show: false, addWaypoints: false,
+        //         // @ts-ignore
+        //         createMarker: () => null,
+        //         lineOptions: {
+        //             styles: [{ color: '#3b82f6', opacity: 0.8, weight: 6, dashArray: '1, 10' }],
+        //             extendToWaypoints: true,
+        //             missingRouteTolerance: 0
+        //         }
+        //     }).addTo(map);
+        // } 
         if (isOnline) {
             routingControlRef.current = L.Routing.control({
                 waypoints: [L.latLng(userLocation.lat, userLocation.lon), L.latLng(selectedShelter.lat, selectedShelter.lon)],
-                router: L.Routing.osrmv1({ serviceUrl: `https://router.project-osrm.org/route/v1`, profile: 'foot' }),
+                router: L.Routing.osrmv1({
+                    serviceUrl: 'https://ka9yst-ip-5-2-197-133.tunnelmole.net/route/v1',
+                    profile: 'foot'
+                }),
                 show: false, addWaypoints: false,
                 // @ts-ignore
                 createMarker: () => null,
@@ -168,8 +241,14 @@ export const MapComponent: React.FC<MapComponentProps> = ({ userLocation, shelte
                     extendToWaypoints: true,
                     missingRouteTolerance: 0
                 }
+                // --- FIX: Add event listeners to log success and error ---
+            }).on('routesfound', function(e) {
+                console.log('Route found:', e.routes[0]);
+            }).on('routingerror', function(e) {
+                console.error('Routing control error:', e.error);
             }).addTo(map);
-        } else {
+        }
+        else {
             // OFFLINE
             get(selectedShelter.adresa).then(cachedRoute => {
                 if (cachedRoute) {
@@ -184,5 +263,22 @@ export const MapComponent: React.FC<MapComponentProps> = ({ userLocation, shelte
         }
     }, [selectedShelter, userLocation, isOnline]);
 
-    return <div ref={mapContainerRef} className="w-full h-full z-5" />;
+    // return <div ref={mapContainerRef} className="w-full h-full z-5" />;
+
+    return (
+        <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+            <div ref={mapContainerRef} className="w-full h-full z-5" />
+
+            {/* Recenter Button: Appears only when follow mode is off and a route is active */}
+            {!isFollowingUser && selectedShelter && (
+                <button
+                    onClick={() => setIsFollowingUser(true)}
+                    className="absolute bottom-[30px] right-[15px] z-[1000] bg-white p-[10px] rounded-full border-2 border-[#ccc] shadow-md cursor-pointer"
+                    title="Recenter on me"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#333" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3" /><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" /></svg>
+                </button>
+            )}
+        </div>
+    );
 };
