@@ -6,7 +6,7 @@ interface Coordinate {
 }
 
 
-const DEMO_MODE = true; 
+const DEMO_MODE = false; 
 const MOCK_START_LOCATION: Coordinate = { lat: 46.7703, lon: 23.5903 }; 
 const MOCK_SPEED = 0.002;
 
