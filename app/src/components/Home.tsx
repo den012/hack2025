@@ -100,6 +100,9 @@ import { useGeolocation } from './hooks/useGeolocation';
 import { useShelters } from './hooks/useShelters';
 import { MapComponent } from './MapComponents';
 import { Sidebar } from './Sidebar';
+import { getAuth, signOut } from 'firebase/auth';
+import { auth} from './GoogleAuth/Config';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 interface Shelter {
@@ -118,9 +121,20 @@ const Home: React.FC = () => {
     const { location: userLocation } = useGeolocation(false);
     const shelters = useShelters(userLocation);
 
+    const navigate = useNavigate();
+
     const [selectedShelter, setSelectedShelter] = useState<any | null>(null);
     const [showAllShelters, setShowAllShelters] = useState(false);
     const [showSidebar, setShowSidebar] = useState(false);
+
+    const handleLogout = async () => {
+        try {// Get the Auth instance
+            await signOut(auth); // Sign out the user
+            navigate('/'); // Redirect to the home page
+        } catch (error) {
+            console.error('Error logging out:', error);
+        }
+    };
 
     const handleShelterSelect = (shelter : Shelter) => {
         setSelectedShelter(shelter);
@@ -151,13 +165,13 @@ const Home: React.FC = () => {
             <header className="p-3 bg-gray-100 border-b border-gray-300 flex items-center justify-between z-10">
                 <div className="flex items-center">
                     <div className="flex items-center">
-                        {user.photoURL && (
+                        {/* {user.photoURL && ( */}
                             <img
-                                src={user.photoURL}
-                                alt="Profile"
+                                src={(user?.photoURL ?? user?.providerData?.[0]?.photoURL) || "https://i.pinimg.com/736x/2c/47/d5/2c47d5dd5b532f83bb55c4cd6f5bd1ef.jpg"}
+                                alt=""
                                 className="rounded-full w-10 h-10 mr-3"
                             />
-                        )}
+                        {/* )} */}
                         <div>
                             <strong>Welcome, {user.displayName}!</strong>
                             {user.email && (
@@ -174,8 +188,16 @@ const Home: React.FC = () => {
                         title="Support this project"
                     >
                         <span>☕</span>
-                        <span>Buy me coffee</span>
+                        <span>Buy me a coffee</span>
                     </a>
+                        <button
+                            onClick={handleLogout}
+                            className="flex ml-3 items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 bg-red-500 hover:bg-red-600 disabled:bg-red-400 text-white font-semibold rounded-full transition-all duration-200 shadow-md hover:shadow-lg text-xs sm:text-sm"
+                            title="Logout"
+                        >
+                            <span className="hidden sm:inline">Logout</span>
+                            <span className="sm:hidden">↪</span>
+                        </button>
                 </div>
                 {/* <button
                     onClick={() => setIsDemoMode(isDemoMode)}
